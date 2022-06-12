@@ -35,7 +35,7 @@ namespace Deform
 		/// Stores mesh data in NativeArrays for fast processing and multithreading.
 		/// </summary>
 		public NativeMeshData DynamicNative;
-		
+
 #if !UNITY_2019_3_OR_NEWER
 		// You cannot copy directly from native arrays to a mesh before 2019.3, so we need to store
 		// the mesh data in a managed form.
@@ -56,6 +56,7 @@ namespace Deform
 
 		public bool Initialize (GameObject targetObject)
 		{
+            // >>> TODO: This must be handled completely differently in the HybridRenderer case
 			if (Target == null)
 				Target = new MeshTarget ();
 			if (!Target.Initialize (targetObject))
@@ -90,10 +91,10 @@ namespace Deform
 			}
 			else
 				return false;
-			
+
 			// Tell the mesh filter to display the dynamic mesh.
 			Target.SetMesh (DynamicMesh);
-			// Mark the dynamic mesh as dynamic for a hypothetical performance boost. 
+			// Mark the dynamic mesh as dynamic for a hypothetical performance boost.
 			// (I've heard this method doesn't do anything)
 			DynamicMesh.MarkDynamic ();
 
@@ -102,7 +103,7 @@ namespace Deform
 			// Store the native data.
 			OriginalNative = new NativeMeshData (DynamicMesh);
 			DynamicNative = new NativeMeshData (DynamicMesh);
-			
+
 #if !UNITY_2019_3_OR_NEWER
 			OriginalManaged = new ManagedMeshData(DynamicMesh);
 			DynamicManaged = new ManagedMeshData(DynamicMesh);
@@ -144,7 +145,9 @@ namespace Deform
 			if (DynamicMesh == null)
 				return;
 
-#if UNITY_2019_3_OR_NEWER
+#if !ENABLE_HYBRID_RENDERER_V2
+
+#elif UNITY_2019_3_OR_NEWER
 			DataUtils.CopyNativeDataToMesh(DynamicNative, DynamicMesh, dataFlags);
 #else
 			DataUtils.CopyNativeDataToManagedData(DynamicManaged, DynamicNative, dataFlags);

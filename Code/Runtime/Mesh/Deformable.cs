@@ -126,32 +126,51 @@ namespace Deform
 		protected DataFlags currentModifiedDataFlags = DataFlags.None;
 		protected DataFlags lastModifiedDataFlags = DataFlags.None;
 
-		protected virtual void OnEnable()
+        internal Renderer TargetRenderer => data.Target.GetRenderer();
+
+        protected virtual void OnEnable()
 		{
 			AllocateData();
 
 			if (Application.isPlaying && UpdateMode == UpdateMode.Auto)
 				Manager = DeformableManager.GetDefaultManager(true);
-			
+
 #if UNITY_EDITOR
 			UnityEditor.SceneManagement.EditorSceneManager.sceneSaving += OnSceneSaving;
 #endif
-			
+
 			InitializeData();
 		}
 
-		protected virtual void OnDisable()
-		{
-			Complete();
+        void CleanUpSelf()
+        {
+            Complete();
 			DisposeData();
 			if (Manager != null)
 				Manager.RemoveDeformable(this);
-			
+
 #if UNITY_EDITOR
 			UnityEditor.SceneManagement.EditorSceneManager.sceneSaving -= OnSceneSaving;
 #endif
+        }
+
+		protected virtual void OnDisable()
+		{
+            if (Application.isPlaying && Globals.IsHybridRenderer)
+            {
+                return;
+            }
+            CleanUpSelf();
 		}
-		
+
+        void OnDestroy()
+        {
+            if (Application.isPlaying && Globals.IsHybridRenderer)
+            {
+                CleanUpSelf();
+            }
+        }
+
 #if UNITY_EDITOR
 		private void OnSceneSaving(Scene scene, string path)
 		{
@@ -168,7 +187,7 @@ namespace Deform
 				return;
 			}
 #endif
-			
+
 			// If the update mode is set to auto and the frequency is not immediate
 			// the deformable needs to be updated immediately so there isn't a single
 			// frame where the mesh is not deformed
@@ -202,7 +221,7 @@ namespace Deform
 				data = new MeshData();
 			data.Initialize(gameObject);
 		}
-		
+
 		public virtual void InitializeData()
 		{
 #if UNITY_EDITOR
@@ -232,7 +251,12 @@ namespace Deform
 #endif
 		protected bool IsVisible()
 		{
-			var renderer = data.Target.GetRenderer();
+            if (Application.isPlaying && Globals.IsHybridRenderer)
+            {
+                // We're disabling the GO's renderer, so we can't check whether it's visible or not...
+                return true;
+            }
+            var renderer = data.Target.GetRenderer();
 			return renderer != null && renderer.isVisible;
 		}
 
@@ -264,7 +288,7 @@ namespace Deform
 		{
 			if (ShouldCull(ignoreCullingMode))
 				return dependency;
-			
+
 			if (data.Target.GetGameObject() == null)
 				if (!data.Initialize(gameObject))
 					return dependency;
@@ -279,7 +303,7 @@ namespace Deform
 			// That will let us force this objects portion of the work to complete
 			// which will let us dispose of its data and avoid a leak.
 			handle = dependency;
-			
+
 			// If the mesh data has been modified, reset it so we don't deform it twice
 			if (currentModifiedDataFlags != DataFlags.None)
 				ResetDynamicData();
@@ -309,7 +333,7 @@ namespace Deform
 
 			// Store if the vertices have been modified. If not, we don't need to update normals/bounds
 			var dirtyVertices = (currentModifiedDataFlags | DataFlags.Vertices) > 0;
-			
+
 			if (dirtyVertices)
 			{
 				if (NormalsRecalculation == NormalsRecalculation.Fast)
@@ -336,7 +360,7 @@ namespace Deform
 		}
 
 		public JobHandle Schedule(JobHandle dependency = default) => Schedule(false, dependency);
-		
+
 		/// <summary>
 		/// Sends native mesh data to the mesh, updates the mesh collider if required and then resets the native mesh data.
 		/// </summary>
@@ -388,7 +412,7 @@ namespace Deform
 		protected void ResetDynamicData()
 		{
 			data.ResetData(currentModifiedDataFlags);
-			
+
 			lastModifiedDataFlags = currentModifiedDataFlags;
 			currentModifiedDataFlags = DataFlags.None;
 		}
@@ -471,5 +495,5 @@ namespace Deform
 		{
 			return data.Target.Exists();
 		}
-	}
+    }
 }

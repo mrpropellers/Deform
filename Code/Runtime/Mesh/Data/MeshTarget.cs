@@ -1,4 +1,6 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
+using Unity.Entities;
 
 namespace Deform
 {
@@ -84,6 +86,7 @@ namespace Deform
 		/// </summary>
 		public void SetMesh (Mesh mesh)
 		{
+            // >>> TODO? Disallow if IsPlaying and IsHybridRenderer
 			if (mesh == null)
 				return;
 
@@ -118,18 +121,20 @@ namespace Deform
 		/// </summary>
 		public GameObject GetGameObject ()
 		{
-			if (meshFilter != null)
+            // TODO: Warn or something if IsPlaying and IsHybridRenderer
+            if (meshFilter != null)
 				return meshFilter.gameObject;
 			if (skinnedMeshRenderer != null)
 				return skinnedMeshRenderer.gameObject;
 			return null;
 		}
-		
+
 		/// <summary>
 		/// Returns the target's transform.
 		/// </summary>
 		public Transform GetTransform ()
 		{
+
 			if (meshFilter != null)
 				return meshFilter.transform;
 			if (skinnedMeshRenderer != null)

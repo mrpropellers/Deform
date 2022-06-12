@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Unity.Entities;
 using UnityEngine;
 using Unity.Jobs;
 
@@ -9,12 +10,13 @@ namespace Deform
 	/// Manages scheduling deformables.
 	/// </summary>
     [HelpURL ("https://github.com/keenanwoodall/Deform/wiki/DeformableManager")]
-	public class DeformableManager : MonoBehaviour
+	public partial class DeformableManager : MonoBehaviour
 	{
 		private static readonly string DEF_MANAGER_NAME = "DefaultDeformableManager";
 
 		private static DeformableManager defaultInstance;
-		/// <summary>
+
+        /// <summary>
 		/// Returns the default manager.
 		/// </summary>
 		/// <param name="createIfMissing">If true, a manager will be created if one doesn't exist.</param>
@@ -23,9 +25,20 @@ namespace Deform
 		{
 			if (defaultInstance == null && createIfMissing)
 			{
+                // if (Globals.IsHybridRenderer)
+                // {
+                //     Debug.LogWarning(
+                //         "Since we're using the Hybrid Renderer, this class doesn't need to be constructed. " +
+                //         "The DeformableSystem will manage our deformables.");
+                // }
 				defaultInstance = new GameObject(DEF_MANAGER_NAME).AddComponent<DeformableManager>();
 				GameObject.DontDestroyOnLoad(defaultInstance.gameObject);
-			}
+                if (Globals.IsHybridRenderer)
+                {
+                    defaultInstance.InitializeEntityBridge();
+                }
+            }
+
 			return defaultInstance;
 		}
 
@@ -66,7 +79,7 @@ namespace Deform
 			addedDeformables.Clear();
 		}
 
-		private void LateUpdate()
+        private void LateUpdate()
 		{
 			if (update)
 				CompleteDeformables (immediateDeformables);
@@ -74,21 +87,26 @@ namespace Deform
 
 		private void OnDisable ()
 		{
-			CompleteDeformables (deformables);	
-			CompleteDeformables (immediateDeformables);	
+			CompleteDeformables (deformables);
+			CompleteDeformables (immediateDeformables);
 		}
 
-		/// <summary>
-		/// Creates a chain of work from the deformables and schedules it.
-		/// </summary>
-		public void ScheduleDeformables (HashSet<IDeformable> deformables)
-		{
-			foreach (var deformable in deformables)
-				deformable.PreSchedule ();
-			foreach (var deformable in deformables)
-				deformable.Schedule ();
+        /// <summary>
+        /// Creates a chain of work from the deformables and schedules it.
+        /// </summary>
+        public void ScheduleDeformables(HashSet<IDeformable> deformables)
+        {
+            foreach (var deformable in deformables)
+            {
+                deformable.PreSchedule();
+            }
 
-			// Schedule the chain.
+            foreach (var deformable in deformables)
+            {
+                deformable.Schedule();
+            }
+
+            // Schedule the chain.
 			JobHandle.ScheduleBatchedJobs ();
 		}
 
@@ -116,6 +134,10 @@ namespace Deform
 			// when the next frame arrives the reset data from the immediate update isn't applied.
 			deformable.PreSchedule ();
 			deformable.Schedule ();
+            if (Globals.IsHybridRenderer)
+            {
+                AddToEntityBridge(deformable as Deformable);
+            }
 		}
 
 		/// <summary>
@@ -123,6 +145,10 @@ namespace Deform
 		/// </summary>
 		public void RemoveDeformable (IDeformable deformable)
 		{
+            if (Globals.IsHybridRenderer)
+            {
+                RemoveFromEntityBridge(deformable as Deformable);
+            }
 			addedDeformables.Remove (deformable);
 			deformables.Remove (deformable);
 			immediateDeformables.Remove(deformable);
