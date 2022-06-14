@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unity.Entities;
 using UnityEngine;
 using Unity.Jobs;
@@ -54,6 +55,9 @@ namespace Deform
 		/// Temporary storage for added deformables to allow them to be updated immediately on the first frame they're added
 		/// </summary>
 		private HashSet<IDeformable> addedDeformables = new HashSet<IDeformable> ();
+
+        public IEnumerable<IDeformable> AllDeformables => deformables.Union(immediateDeformables);
+        public int NumDeformables { get; private set; } = 0;
 
 		private void Update ()
 		{
@@ -138,7 +142,9 @@ namespace Deform
             {
                 AddToEntityBridge(deformable as Deformable);
             }
-		}
+
+            NumDeformables++;
+        }
 
 		/// <summary>
 		/// Unregisters a deformable from this manager.
@@ -152,6 +158,7 @@ namespace Deform
 			addedDeformables.Remove (deformable);
 			deformables.Remove (deformable);
 			immediateDeformables.Remove(deformable);
-		}
+            NumDeformables--;
+        }
 	}
 }

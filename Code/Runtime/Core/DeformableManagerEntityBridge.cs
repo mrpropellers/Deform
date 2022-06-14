@@ -17,6 +17,10 @@ namespace Deform
         BlobAssetStore m_BlobStore;
 
         IEnumerable<KeyValuePair<Deformable, Entity>> DeformableEntityPairs => m_DeformableEntityMapping;
+        public bool HasEntity(Deformable deformable) => m_DeformableEntityMapping.ContainsKey(deformable);
+
+        public bool TryGetEntity(Deformable deformable, out Entity entity) =>
+            m_DeformableEntityMapping.TryGetValue(deformable, out entity);
 
         public void OnDestroy()
         {
